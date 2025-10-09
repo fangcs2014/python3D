@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <meta name="referrer" content="no-referrer" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>南京供电段地理信息系统</title>
@@ -366,7 +367,20 @@
         </div>
     </div>
 
+    
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9ch4Ek4x7BM9qwDA_CLR_btK3U99BJ5g&callback=initMap" async defer></script>
+function initMap() {
+  var map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat: 39.90923, lng: 116.397428},
+    zoom: 10,
+    // 可以设置 mapTypeId 为 'hybrid' 直接显示卫星混合地图
+    mapTypeId: 'hybrid'
+  });
+  // 将控件添加到地图
+map.addControl(ctrl);
+}
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
     <script>
         // 初始化地图
         const map = L.map('map').setView([39.9042, 116.4074], 5);
