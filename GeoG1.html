@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们地理信息系统</title>
+    <!-- 引入Google Maps JavaScript API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9ch4Ek4x7BM9qwDA_CLR_btK3U99BJ5g&callback=initMap&libraries=geometry" async defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo i {
+            font-size: 1.6rem;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .panel {
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e1e5e9;
+        }
+        
+        .panel-header {
+            padding: 12px 15px;
+            background: #1a73e8;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-content {
+            padding: 15px;
+            background: white;
+            display: block;
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .toolbar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            background: white;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tool-btn:hover {
+            background: #1a73e8;
+            color: white;
+        }
+        
+        .tool-btn.active {
+            background: #1a73e8;
+            color: white;
+        }
+        
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 200px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .control-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #5f6368;
+            margin-bottom: 5px;
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .map-type-btn {
+            flex: 1;
+            padding: 8px 5px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            text-align: center;
+            border: 1px solid #dadce0;
+        }
+        
+        .map-type-btn.active {
+            background: #1a73e8;
+            color: white;
+            border-color: #1a73e8;
+        }
+        
+        .search-box {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+        
+        .search-btn {
+            padding: 10px 15px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        
+        .result-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        
+        .result-item:hover {
+            background: #f5f7fa;
+        }
+        
+        .coordinates {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            z-index: 1000;
+        }
+        
+        .marker-form {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: #1a73e8;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                height: 100%;
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-satellite"></i>
+                    <h1>谷歌卫星地理信息系统</h1>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>位置搜索</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="search-box">
+                            <input type="text" class="search-input" id="searchInput" placeholder="输入地名、地址或坐标...">
+                            <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
+                        </div>
+                        <div class="result-list" id="searchResults">
+                            <!-- 搜索结果将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>地图标记</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="control-row">
+                            <button class="btn btn-primary" id="addMarkerBtn" style="flex: 1;">
+                                <i class="fas fa-map-marker-alt"></i> 添加标记
+                            </button>
+                            <button class="btn" id="clearMarkersBtn" style="flex: 1; background: #f1f3f4; color: #3c4043;">
+                                <i class="fas fa-eraser"></i> 清除标记
+                            </button>
+                        </div>
+                        
+                        <div class="marker-form">
+                            <div class="form-group">
+                                <label class="control-label">标记标题</label>
+                                <input type="text" class="form-input" id="markerTitle" placeholder="输入标记标题">
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">标记描述</label>
+                                <textarea class="form-input" id="markerDescription" placeholder="输入标记描述"></textarea>
+                            </div>
+                            <button class="btn btn-primary" id="saveMarkerBtn" style="width: 100%;">保存标记</button>
+                        </div>
+                        
+                        <div id="markerList" style="max-height: 150px; overflow-y: auto; margin-top: 15px;">
+                            <!-- 标记列表将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>测量工具</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="control-row">
+                            <button class="tool-btn" data-tool="distance" title="距离测量" style="width: auto; flex: 1; padding: 0 5px;">
+                                <i class="fas fa-ruler"></i> 距离测量
+                            </button>
+                            <button class="tool-btn" data-tool="area" title="面积测量" style="width: auto; flex: 1; padding: 0 5px;">
+                                <i class="fas fa-vector-square"></i> 面积测量
+                            </button>
+                        </div>
+                        <button class="btn" id="clearMeasurementsBtn" style="width: 100%; margin-top: 10px; background: #f1f3f4; color: #3c4043;">
+                            <i class="fas fa-trash"></i> 清除测量
+                        </button>
+                        <div class="measure-result" id="measureResult" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                            点击按钮开始测量
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="coordinates" id="coordinates">经度: 0, 纬度: 0, 缩放: 0</div>
+            
+            <div class="map-controls">
+                <div class="control-group">
+                    <div class="control-label">地图类型</div>
+                    <div class="control-row">
+                        <button class="map-type-btn active" data-type="satellite">卫星影像</button>
+                        <button class="map-type-btn" data-type="hybrid">混合地图</button>
+                    </div>
+                    <div class="control-row">
+                        <button class="map-type-btn" data-type="roadmap">道路地图</button>
+                        <button class="map-type-btn" data-type="terrain">地形地图</button>
+                    </div>
+                </div>
+                
+                <div class="control-group" style="margin-top: 10px;">
+                    <div class="control-label">3D视图</div>
+                    <div class="control-row">
+                        <button class="map-type-btn" data-type="tilt45" id="tilt45Btn">45°倾斜</button>
+                        <button class="map-type-btn" data-type="tilt0" id="tilt0Btn">正常视图</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <button class="tool-btn" title="放大" id="zoomInBtn"><i class="fas fa-plus"></i></button>
+                <button class="tool-btn" title="缩小" id="zoomOutBtn"><i class="fas fa-minus"></i></button>
+                <button class="tool-btn" title="定位到我的位置" id="locateBtn"><i class="fas fa-location-arrow"></i></button>
+                <button class="tool-btn" title="全屏" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let map;
+        let markers = [];
+        let drawingManager;
+        let measuredPaths = [];
+        
+        // 初始化地图
+        function initMap() {
+            // 创建地图实例
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 39.9042, lng: 116.4074 }, // 北京市中心
+                zoom: 10,
+                mapTypeId: 'satellite',
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                styles: [
+                    {
+                        featureType: 'all',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'on' }]
+                    }
+                ]
+            });
+            
+            // 添加地图类型切换功能
+            setupMapTypeControls();
+            
+            // 添加工具栏功能
+            setupToolbar();
+            
+            // 添加标记功能
+            setupMarkerControls();
+            
+            // 添加搜索功能
+            setupSearchControls();
+            
+            // 添加测量功能
+            setupMeasurementControls();
+            
+            // 更新坐标信息
+            map.addListener('mousemove', function(event) {
+                document.getElementById('coordinates').textContent = 
+                    `经度: ${event.latLng.lng().toFixed(4)}, 纬度: ${event.latLng.lat().toFixed(4)}, 缩放: ${map.getZoom()}`;
+            });
+            
+            // 添加一些示例标记
+            addSampleMarkers();
+        }
+        
+        // 设置地图类型控件
+        function setupMapTypeControls() {
+            const typeButtons = document.querySelectorAll('.map-type-btn');
+            
+            typeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const type = this.getAttribute('data-type');
+                    
+                    // 移除所有按钮的激活状态
+                    typeButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // 为当前按钮添加激活状态
+                    this.classList.add('active');
+                    
+                    // 根据类型切换地图
+                    switch(type) {
+                        case 'satellite':
+                            map.setMapTypeId('satellite');
+                            break;
+                        case 'hybrid':
+                            map.setMapTypeId('hybrid');
+                            break;
+                        case 'roadmap':
+                            map.setMapTypeId('roadmap');
+                            break;
+                        case 'terrain':
+                            map.setMapTypeId('terrain');
+                            break;
+                        case 'tilt45':
+                            map.setTilt(45);
+                            break;
+                        case 'tilt0':
+                            map.setTilt(0);
+                            break;
+                    }
+                });
+            });
+        }
+        
+        // 设置工具栏功能
+        function setupToolbar() {
+            document.getElementById('zoomInBtn').addEventListener('click', function() {
+                map.setZoom(map.getZoom() + 1);
+            });
+            
+            document.getElementById('zoomOutBtn').addEventListener('click', function() {
+                map.setZoom(map.getZoom() - 1);
+            });
+            
+            document.getElementById('locateBtn').addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        map.setCenter(pos);
+                        map.setZoom(15);
+                        
+                        // 添加位置标记
+                        new google.maps.Marker({
+                            position: pos,
+                            map: map,
+                            title: '您的位置',
+                            icon: {
+                                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                                    '<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><path d="M10 0C6.1 0 3 3.1 3 7c0 5.3 7 13 7 13s7-7.7 7-13c0-3.9-3.1-7-7-7zm0 9.5c-1.4 0-2.5-1.1-2.5-2.5S8.6 4.5 10 4.5s2.5 1.1 2.5 2.5S11.4 9.5 10 9.5z" fill="#1a73e8"/></svg>'
+                                ),
+                                scaledSize: new google.maps.Size(20, 20),
+                                anchor: new google.maps.Point(10, 10)
+                            }
+                        });
+                    });
+                } else {
+                    alert('浏览器不支持地理定位功能');
+                }
+            });
+            
+            document.getElementById('fullscreenBtn').addEventListener('click', function() {
+                const mapContainer = document.querySelector('.map-container');
+                
+                if (!document.fullscreenElement) {
+                    if (mapContainer.requestFullscreen) {
+                        mapContainer.requestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            });
+        }
+        
+        // 设置标记控件
+        function setupMarkerControls() {
+            let addMarkerMode = false;
+            let tempMarker = null;
+            
+            document.getElementById('addMarkerBtn').addEventListener('click', function() {
+                addMarkerMode = true;
+                document.getElementById('measureResult').textContent = '点击地图添加标记';
+            });
+            
+            document.getElementById('clearMarkersBtn').addEventListener('click', function() {
+                markers.forEach(marker => {
+                    marker.setMap(null);
+                });
+                markers = [];
+                updateMarkerList();
+            });
+            
+            document.getElementById('saveMarkerBtn').addEventListener('click', function() {
+                const title = document.getElementById('markerTitle').value || '未命名标记';
+                const description = document.getElementById('markerDescription').value || '无描述';
+                
+                if (tempMarker) {
+                    // 设置标记信息窗口
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div style="padding: 10px; max-width: 200px;">
+                                <h3 style="margin: 0 0 5px 0;">${title}</h3>
+                                <p style="margin: 0;">${description}</p>
+                            </div>
+                        `
+                    });
+                    
+                    tempMarker.addListener('click', function() {
+                        infoWindow.open(map, tempMarker);
+                    });
+                    
+                    markers.push(tempMarker);
+                    updateMarkerList();
+                    
+                    // 重置表单
+                    document.getElementById('markerTitle').value = '';
+                    document.getElementById('markerDescription').value = '';
+                    tempMarker = null;
+                    addMarkerMode = false;
+                    
+                    document.getElementById('measureResult').textContent = '标记已添加';
+                } else {
+                    alert('请先点击地图添加标记');
+                }
+            });
+            
+            // 地图点击事件添加标记
+            map.addListener('click', function(event) {
+                if (addMarkerMode) {
+                    if (tempMarker) {
+                        tempMarker.setMap(null);
+                    }
+                    
+                    tempMarker = new google.maps.Marker({
+                        position: event.latLng,
+                        map: map,
+                        title: '新标记',
+                        draggable: true
+                    });
+                    
+                    document.getElementById('measureResult').textContent = 
+                        `标记已放置，位置: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}。请填写信息并保存。`;
+                }
+            });
+        }
+        
+        // 更新标记列表
+        function updateMarkerList() {
+            const markerList = document.getElementById('markerList');
+            markerList.innerHTML = '';
+            
+            markers.forEach((marker, index) => {
+                const markerElement = document.createElement('div');
+                markerElement.className = 'result-item';
+                markerElement.innerHTML = `
+                    <div style="font-weight: 600;">${marker.title || '标记 ' + (index + 1)}</div>
+                    <div style="font-size: 0.8rem; color: #5f6368;">
+                        ${marker.position.lat().toFixed(4)}, ${marker.position.lng().toFixed(4)}
+                    </div>
+                    <button onclick="removeMarker(${index})" style="float: right; background: #ea4335; color: white; border: none; border-radius: 3px; padding: 2px 5px; font-size: 0.8rem;">删除</button>
+                `;
+                markerList.appendChild(markerElement);
+            });
+        }
+        
+        // 删除标记
+        function removeMarker(index) {
+            if (index >= 0 && index < markers.length) {
+                markers[index].setMap(null);
+                markers.splice(index, 1);
+                updateMarkerList();
+            }
+        }
+        
+        // 设置搜索控件
+        function setupSearchControls() {
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+            
+            document.getElementById('searchInput').addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        }
+        
+        // 执行搜索
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+            
+            const geocoder = new google.maps.Geocoder();
+            const resultsContainer = document.getElementById('searchResults');
+            
+            geocoder.geocode({ address: query }, function(results, status) {
+                if (status === 'OK' && results[0]) {
+                    resultsContainer.innerHTML = '';
+                    
+                    results.forEach((result, index) => {
+                        if (index < 5) { // 只显示前5个结果
+                            const resultElement = document.createElement('div');
+                            resultElement.className = 'result-item';
+                            resultElement.textContent = result.formatted_address;
+                            
+                            resultElement.addEventListener('click', function() {
+                                map.setCenter(result.geometry.location);
+                                map.setZoom(15);
+                                
+                                // 添加标记
+                                new google.maps.Marker({
+                                    position: result.geometry.location,
+                                    map: map,
+                                    title: result.formatted_address
+                                });
+                            });
+                            
+                            resultsContainer.appendChild(resultElement);
+                        }
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<div class="result-item">未找到结果</div>';
+                }
+            });
+        }
+        
+        // 设置测量控件
+        function setupMeasurementControls() {
+            let measureMode = null;
+            let measurePath = [];
+            let measurePolyline = null;
+            let measurePolygon = null;
+            
+            document.querySelector('[data-tool="distance"]').addEventListener('click', function() {
+                measureMode = 'distance';
+                document.getElementById('measureResult').textContent = '点击地图开始测量距离，双击结束';
+                resetMeasurement();
+            });
+            
+            document.querySelector('[data-tool="area"]').addEventListener('click', function() {
+                measureMode = 'area';
+                document.getElementById('measureResult').textContent = '点击地图开始测量面积，双击结束';
+                resetMeasurement();
+            });
+            
+            document.getElementById('clearMeasurementsBtn').addEventListener('click', function() {
+                resetMeasurement();
+                document.getElementById('measureResult').textContent = '测量已清除';
+            });
+            
+            // 地图点击事件进行测量
+            map.addListener('click', function(event) {
+                if (!measureMode) return;
+                
+                measurePath.push(event.latLng);
+                
+                if (measurePath.length === 1) {
+                    // 第一次点击，创建折线
+                    measurePolyline = new google.maps.Polyline({
+                        path: measurePath,
+                        geodesic: true,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 3,
+                        map: map
+                    });
+                } else {
+                    // 更新折线
+                    measurePolyline.setPath(measurePath);
+                    
+                    // 计算距离
+                    if (measureMode === 'distance') {
+                        const distance = calculatePathDistance(measurePath);
+                        document.getElementById('measureResult').textContent = 
+                            `距离: ${distance.toFixed(2)} 米`;
+                    }
+                }
+            });
+            
+            // 地图双击事件结束测量
+            map.addListener('dblclick', function(event) {
+                if (!measureMode || measurePath.length < 2) return;
+                
+                if (measureMode === 'area' && measurePath.length >= 3) {
+                    // 创建多边形计算面积
+                    measurePolygon = new google.maps.Polygon({
+                        paths: measurePath,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: '#FF0000',
+                        fillOpacity: 0.35,
+                        map: map
+                    });
+                    
+                    const area = calculatePolygonArea(measurePath);
+                    document.getElementById('measureResult').textContent = 
+                        `面积: ${area.toFixed(2)} 平方米`;
+                }
+                
+                measuredPaths.push({
+                    type: measureMode,
+                    path: [...measurePath],
+                    polyline: measurePolyline,
+                    polygon: measurePolygon
+                });
+                
+                measureMode = null;
+                measurePath = [];
+            });
+        }
+        
+        // 重置测量
+        function resetMeasurement() {
+            measuredPaths.forEach(item => {
+                if (item.polyline) item.polyline.setMap(null);
+                if (item.polygon) item.polygon.setMap(null);
+            });
+            
+            measuredPaths = [];
+            
+            if (measurePolyline) {
+                measurePolyline.setMap(null);
+                measurePolyline = null;
+            }
+            
+            if (measurePolygon) {
+                measurePolygon.setMap(null);
+                measurePolygon = null;
+            }
+            
+            measurePath = [];
+            measureMode = null;
+        }
+        
+        // 计算路径距离
+        function calculatePathDistance(path) {
+            let distance = 0;
+            for (let i = 1; i < path.length; i++) {
+                distance += google.maps.geometry.spherical.computeDistanceBetween(
+                    path[i-1], path[i]
+                );
+            }
+            return distance;
+        }
+        
+        // 计算多边形面积
+        function calculatePolygonArea(path) {
+            return google.maps.geometry.spherical.computeArea(path);
+        }
+        
+        // 添加示例标记
+        function addSampleMarkers() {
+            const locations = [
+                { lat: 39.9042, lng: 116.4074, title: '北京市中心' },
+                { lat: 31.2304, lng: 121.4737, title: '上海市中心' },
+                { lat: 23.1291, lng: 113.2644, title: '广州市中心' }
+            ];
+            
+            locations.forEach(location => {
+                const marker = new google.maps.Marker({
+                    position: { lat: location.lat, lng: location.lng },
+                    map: map,
+                    title: location.title
+                });
+                
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<div style="padding: 10px;"><h3 style="margin: 0;">${location.title}</h3></div>`
+                });
+                
+                marker.addListener('click', function() {
+                    infoWindow.open(map, marker);
+                });
+                
+                markers.push(marker);
+            });
+            
+            updateMarkerList();
+        }
+        
+        // 全局函数
+        window.removeMarker = removeMarker;
+    </script>
+</body>
+</html>
